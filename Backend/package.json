@@ -1,0 +1,17 @@
+{
+  "name": "BSSM-roadmap-Backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "repository": "https://github.com/BSSM-roadmap/BSSM-roadmap-Backend.git",
+  "author": "sebanimm <gks32114221@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bsm-oauth": "^1.0.10",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.6.3"
+  }
+}

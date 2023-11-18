@@ -4,6 +4,11 @@ const jwt = require("jsonwebtoken");
 const mysql = require("mysql2");
 const { BsmOauth, BsmOauthError, BsmOauthErrorType } = require("bsm-oauth");
 
+const HOST = process.env.MYSQL_HOST;
+const USER = process.env.MYSQL_USER;
+const PASSWORD = process.env.MYSQL_PASSWORD;
+const PORT = process.env.MYSQL_PORT;
+const DATABASE = process.env.MYSQL_DATABASE;
 const BSM_AUTH_CLIENT_ID = process.env.BSM_AUTH_CLIENT_ID;
 const BSM_AUTH_CLIENT_SECRET = process.env.BSM_AUTH_CLIENT_SECRET;
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
@@ -17,11 +22,11 @@ const SECONDS_IN_A_MONTH =
   SECONDS_IN_AN_HOUR * HOURS_IN_A_DAY * DAYS_IN_A_MONTH;
 
 const connection = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "1234",
-  port: 3306,
-  database: "bssm_roadmap",
+  host: HOST,
+  user: USER,
+  password: PASSWORD,
+  port: PORT,
+  database: DATABASE,
 });
 
 const app = express();

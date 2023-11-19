@@ -1,37 +1,15 @@
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const mysql = require("mysql2");
-const { BsmOauth, BsmOauthError, BsmOauthErrorType } = require("bsm-oauth");
-
-const HOST = process.env.MYSQL_HOST;
-const USER = process.env.MYSQL_USER;
-const PASSWORD = process.env.MYSQL_PASSWORD;
-const PORT = process.env.MYSQL_PORT;
-const DATABASE = process.env.MYSQL_DATABASE;
-const BSM_AUTH_CLIENT_ID = process.env.BSM_AUTH_CLIENT_ID;
-const BSM_AUTH_CLIENT_SECRET = process.env.BSM_AUTH_CLIENT_SECRET;
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
-
-const SECONDS_IN_A_MINUTE = 60;
-const MINUTES_IN_AN_HOUR = 60;
-const HOURS_IN_A_DAY = 24;
-const DAYS_IN_A_MONTH = 30;
-const SECONDS_IN_AN_HOUR = SECONDS_IN_A_MINUTE * MINUTES_IN_AN_HOUR;
-const SECONDS_IN_A_MONTH =
-  SECONDS_IN_AN_HOUR * HOURS_IN_A_DAY * DAYS_IN_A_MONTH;
-
-const connection = mysql.createConnection({
-  host: HOST,
-  user: USER,
-  password: PASSWORD,
-  port: PORT,
-  database: DATABASE,
-});
+const { BsmOauthError, BsmOauthErrorType } = require("bsm-oauth");
+const {
+  connection,
+  bsmOauth,
+  generateAccessToken,
+  generateRefreshToken,
+  decodeToken,
+} = require("./constants");
 
 const app = express();
-
-const bsmOauth = new BsmOauth(BSM_AUTH_CLIENT_ID, BSM_AUTH_CLIENT_SECRET);
 
 app.use(cors({ origin: "*" }));
 
@@ -40,28 +18,24 @@ app.post("/login/oauth", async (req, res) => {
   const authCode = req.query.code;
   try {
     const token = await bsmOauth.getToken(authCode);
-    const { userCode, email, nickname, student } = await bsmOauth.getResource(
-      token,
-    );
-    const z = connection.query(
-      `insert into user(name, admissionYear, grade, class) values(${student.name},${student.admissionYear}, ${student.grade}, ${student.class})`,
-    );
+    const resource = await bsmOauth.getResource(token);
+    const { userCode, email, nickname } = resource;
+    const { name, enrolledAt, grade, classNo } = resource.student;
+    const values = { name, enrolledAt, grade, classNo, userCode };
 
-    console.log(z);
-    const accessToken = jwt.sign(
-      { userCode: userCode, email: email },
-      JWT_SECRET_KEY,
-      { expiresIn: SECONDS_IN_AN_HOUR },
-    );
-    const refreshToken = jwt.sign(
-      {
-        userCode: userCode,
-        email: email,
-        nickname: nickname,
-      },
-      JWT_SECRET_KEY,
-      { expiresIn: SECONDS_IN_A_MONTH },
-    );
+    const findQuery = "SELECT userCode FROM user WHERE userCode = ?";
+    connection.query(findQuery, userCode, (error, result) => {
+      console.log(result);
+    });
+
+    const insertQuery =
+      "INSERT INTO user(name, enrolledAt, grade, classNo, userCode) VALUES(?)";
+    connection.query(insertQuery, values, (error, result) => {
+      console.log(result);
+    });
+
+    const accessToken = generateAccessToken(userCode, email);
+    const refreshToken = generateRefreshToken(userCode, email, nickname);
 
     res.send({ accessToken, refreshToken });
   } catch (error) {
@@ -83,12 +57,8 @@ app.post("/login/oauth", async (req, res) => {
 app.put("/token/reissue", (req, res) => {
   try {
     const refreshToken = req.query.refreshToken;
-    const { userCode, email } = jwt.verify(refreshToken, JWT_SECRET_KEY);
-    const accessToken = jwt.sign(
-      { userCode: userCode, email: email },
-      JWT_SECRET_KEY,
-      { expiresIn: SECONDS_IN_AN_HOUR },
-    );
+    const { userCode, email } = decodeToken(refreshToken);
+    const accessToken = generateAccessToken(userCode, email);
     res.send(accessToken);
   } catch (error) {
     console.log(error);
@@ -100,7 +70,7 @@ app.put("/token/reissue", (req, res) => {
 app.get("/user", (req, res) => {
   try {
     const accessToken = req.query.accessToken;
-    const { userCode } = jwt.verify(accessToken, JWT_SECRET_KEY);
+    const { userCode } = decodeToken(accessToken);
     connection.query(
       `select * from user where userId = ${userCode}`,
       (error, rows) => {

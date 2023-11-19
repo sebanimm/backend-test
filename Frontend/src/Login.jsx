@@ -25,18 +25,19 @@ const Login = () => {
 
       navigate("/");
     } catch (error) {
-      console.error(error);
       navigate("/");
     }
   };
 
   const logoutUser = () => {
     localStorage.clear();
+    window.location.reload();
   };
 
   useEffect(() => {
-    loginUser();
-  }, [encodedValue]);
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (refreshToken) loginUser();
+  }, []);
 
   return (
     <>

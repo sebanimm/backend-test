@@ -7,8 +7,6 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-    },
-    {
       roadmapId: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -17,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       modelName: "Save",
-      tableName: "Save",
+      tableName: "save",
       timestamps: false,
       charset: "utf8",
       collate: "utf8_general_ci",

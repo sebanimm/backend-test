@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
+        unique: true,
       },
       userId: {
         type: DataTypes.INTEGER,
@@ -19,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       modelName: "Roadmap",
-      tableName: "Roadmap",
+      tableName: "roadmap",
       timestamps: false,
       charset: "utf8",
       collate: "utf8_general_ci",

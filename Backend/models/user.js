@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
+        unique: true,
       },
       name: {
         type: DataTypes.STRING(10),
@@ -24,10 +25,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      userCode: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        unique: true,
+      },
     },
     {
       modelName: "User",
-      tableName: "User",
+      tableName: "user",
       timestamps: false,
       charset: "utf8",
       collate: "utf8_general_ci",

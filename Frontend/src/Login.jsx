@@ -35,8 +35,7 @@ const Login = () => {
   };
 
   useEffect(() => {
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (refreshToken) loginUser();
+    loginUser();
   }, []);
 
   return (

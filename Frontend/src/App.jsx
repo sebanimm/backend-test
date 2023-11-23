@@ -5,6 +5,7 @@ import Login from "./Login";
 function App() {
   const [data, setData] = React.useState();
   const [token, setToken] = React.useState();
+
   const get = async () => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) return;
@@ -16,6 +17,7 @@ function App() {
 
   React.useEffect(() => {
     get();
+    console.log(data);
   }, []);
 
   const reissueToken = async () => {
@@ -29,7 +31,6 @@ function App() {
 
   return (
     <div style={{ background: "lightblue", width: "100vw", height: "100vh" }}>
-      <h1>응답 : {data}</h1>
       <button>
         <Login />
       </button>
@@ -40,6 +41,7 @@ function App() {
         </h1>
       </div>
       <button onClick={get}>내 정보</button>
+      <h1>응답 : {}</h1>
     </div>
   );
 }

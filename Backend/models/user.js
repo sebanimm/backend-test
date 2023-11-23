@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      class: {
+      classNo: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },

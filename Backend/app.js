@@ -1,25 +1,13 @@
 const express = require("express");
 const cors = require("cors");
-const mysql = require("mysql2");
 const db = require("./models");
+const login = require("./utils/login");
+const user = require("./utils/user");
+const roadmap = require("./utils/roadmap");
+const save = require("./utils/save");
+const constants = require("./constants");
 const { BsmOauth, BsmOauthError, BsmOauthErrorType } = require("bsm-oauth");
-const {
-  HOST,
-  USER,
-  PASSWORD,
-  PORT,
-  DATABASE,
-  BSM_AUTH_CLIENT_ID,
-  BSM_AUTH_CLIENT_SECRET,
-} = require("./constants");
-
-const connection = mysql.createConnection({
-  host: HOST,
-  user: USER,
-  password: PASSWORD,
-  port: PORT,
-  database: DATABASE,
-});
+const { tokenValidation } = require("./middleware");
 
 db.sequelize
   .sync({ force: false })
@@ -30,58 +18,59 @@ db.sequelize
     console.error(err);
   });
 
-const bsmOauth = new BsmOauth(BSM_AUTH_CLIENT_ID, BSM_AUTH_CLIENT_SECRET);
+const bsmOauth = new BsmOauth(
+  constants.BSM_AUTH_CLIENT_ID,
+  constants.BSM_AUTH_CLIENT_SECRET,
+);
 
 const app = express();
 
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: true, credentials: true }));
 
 // bsm oauth 로그인
 app.post("/login/oauth", async (request, response) => {
-  const authCode = request.query.code;
   try {
+    const authCode = request.query.code;
     const token = await bsmOauth.getToken(authCode);
     const resource = await bsmOauth.getResource(token);
-    const { userCode, email, nickname } = resource;
-    const { name, enrolledAt, grade, classNo } = resource.student;
-    const values = { name, enrolledAt, grade, classNo, userCode };
 
-    const findQuery = "SELECT userCode FROM user WHERE userCode = ?";
-    connection.query(findQuery, userCode, (error, result) => {
-      console.log(result);
-    });
-
-    const insertQuery =
-      "INSERT INTO user(name, enrolledAt, grade, classNo, userCode) VALUES(?)";
-    connection.query(insertQuery, values, (error, result) => {
-      console.log(result);
-    });
-
-    const accessToken = generateAccessToken(userCode, email);
-    const refreshToken = generateRefreshToken(userCode, email, nickname);
+    const { accessToken, refreshToken } = await login.loginUser(resource);
 
     response.send({ accessToken, refreshToken });
   } catch (error) {
-    if (!(error instanceof BsmOauthError)) {
-      return;
-    }
-    if (error.type === BsmOauthErrorType.INVALID_CLIENT) {
-      response.status(400).send("Invalid client");
-    }
-    if (error.type === BsmOauthErrorType.AUTH_CODE_NOT_FOUND) {
-      response.status(404).send("Authentication code not found");
-    }
-    if (error.type === BsmOauthErrorType.TOKEN_NOT_FOUND) {
-      response.status(404).send("Token not found");
+    if (error instanceof BsmOauthError) {
+      switch (error.type) {
+        case BsmOauthErrorType.INVALID_CLIENT: {
+          console.log("클라이언트 정보가 올바르지 않습니다.");
+          break;
+        }
+        case BsmOauthErrorType.AUTH_CODE_NOT_FOUND: {
+          console.log("인증코드를 찾을 수 없습니다.");
+          break;
+        }
+        case BsmOauthErrorType.TOKEN_NOT_FOUND: {
+          console.log("토큰을 찾을 수 없습니다.");
+          break;
+        }
+        default: {
+          console.log("알 수 없는 오류가 발생했습니다.");
+        }
+      }
+    } else {
+      console.log("알 수 없는 오류가 발생했습니다2.");
+      console.log(error);
     }
   }
 });
 
-app.put("/token/reissue", (request, response) => {
+// 토큰 재발급
+app.put("/login/token", tokenValidation, (request, response) => {
   try {
     const refreshToken = request.query.refreshToken;
-    const { userCode, email } = decodeToken(refreshToken);
-    const accessToken = generateAccessToken(userCode, email);
+    const { userCode } = login.decodeToken(refreshToken);
+
+    const accessToken = login.generateToken(userCode, "1h");
+
     response.send(accessToken);
   } catch (error) {
     console.log(error);
@@ -90,21 +79,27 @@ app.put("/token/reissue", (request, response) => {
 });
 
 // 로그인된 유저의 정보
-app.get("/user", (request, response) => {
+app.get("/user", async (request, response) => {
   try {
     const accessToken = request.query.accessToken;
-    const { userCode } = decodeToken(accessToken);
-    connection.query(
-      `select * from user where userId = ${userCode}`,
-      (error, rows) => {
-        if (error) throw error;
-        response.send(rows);
-      },
-    );
+    const { userCode } = login.decodeToken(accessToken);
+
+    const data = await user.getSelectedUserData(userCode);
+
+    if (data === null) {
+      response.status(404).send("user not found");
+    } else {
+      response.send(data.dataValues);
+    }
   } catch (error) {
     console.log(error);
     response.status(403).send("Invalid jwt");
   }
+});
+
+// 특정 유저의 정보 조회
+app.get("/user/:userId", (request, response) => {
+  const userId = request.params.userId;
 });
 
 // 특정 유저의 로드맵 조회

@@ -7,7 +7,7 @@ const roadmap = require("./utils/roadmap");
 const save = require("./utils/save");
 const constants = require("./constants");
 const { BsmOauth, BsmOauthError, BsmOauthErrorType } = require("bsm-oauth");
-const { tokenValidation } = require("./middleware");
+const { validateToken } = require("./middleware");
 
 db.sequelize
   .sync({ force: false })
@@ -26,6 +26,14 @@ const bsmOauth = new BsmOauth(
 const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
+app.use("/roadmap", express.json());
+app.use("/roadmap", express.urlencoded({ extended: false }));
+app.use("/roadmap/:roadmapId", express.json());
+app.use("/roadmap/:roadmapId", express.urlencoded({ extended: false }));
+
+app.get("/", (res, req) => {
+  req.send("성공");
+});
 
 // bsm oauth 로그인
 app.post("/login/oauth", async (request, response) => {
@@ -64,12 +72,12 @@ app.post("/login/oauth", async (request, response) => {
 });
 
 // 토큰 재발급
-app.put("/login/token", tokenValidation, (request, response) => {
+app.put("/login/token", validateToken, (request, response) => {
   try {
-    const refreshToken = request.query.refreshToken;
-    const { userCode } = login.decodeToken(refreshToken);
+    const refreshToken = request.headers["refresh-token"];
+    const { userCode, userId } = login.decodeToken(refreshToken);
 
-    const accessToken = login.generateToken(userCode, "1h");
+    const accessToken = login.generateToken(userCode, userId, "1h");
 
     response.send(accessToken);
   } catch (error) {
@@ -79,15 +87,14 @@ app.put("/login/token", tokenValidation, (request, response) => {
 });
 
 // 로그인된 유저의 정보
-app.get("/user", async (request, response) => {
+app.get("/user", validateToken, async (request, response) => {
   try {
-    const accessToken = request.query.accessToken;
+    const accessToken = request.headers.authorization;
     const { userCode } = login.decodeToken(accessToken);
-
-    const data = await user.getSelectedUserData(userCode);
+    const data = await user.getUserData(userCode);
 
     if (data === null) {
-      response.status(404).send("user not found");
+      response.status(404).send("User not found");
     } else {
       response.send(data.dataValues);
     }
@@ -98,57 +105,115 @@ app.get("/user", async (request, response) => {
 });
 
 // 특정 유저의 정보 조회
-app.get("/user/:userId", (request, response) => {
-  const userId = request.params.userId;
+app.get("/user/:userId", async (request, response) => {
+  try {
+    const userId = request.params.userId;
+    const data = await user.getSelectedUserData(userId);
+
+    if (data === null) {
+      response.status(404).send("User not found");
+    } else {
+      response.send(data.dataValues);
+    }
+  } catch (error) {
+    console.log(error);
+    response.status(404).send("invalid user");
+  }
 });
 
 // 특정 유저의 로드맵 조회
-app.get("/user/:userId/roadmap", (request, response) => {
-  response.send("테스트");
+app.get("/user/:userId/roadmap", async (request, response) => {
+  try {
+    const userId = request.params.userId;
+    const data = await roadmap.getUserRoadmapData(userId);
+
+    response.send(data.dataValues);
+  } catch (error) {
+    console.log(error);
+    response.status(404).send("invalid user");
+  }
 });
 
 // 로드맵 전체 조회
-app.get("/roadmap", (request, response) => {
-  response.send("테스트");
-});
-
-// 로드맵 상세 조회
-app.get("/roadmap/:roadmapId", (request, response) => {
-  response.send("테스트");
+app.get("/roadmap", async (request, response) => {
+  try {
+    const data = await roadmap.getRoadmapData();
+    response.send(data);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 // 로드맵 작성
-app.post("/roadmap/:roadmapId", (request, response) => {
-  response.send("테스트");
+app.post("/roadmap", validateToken, async (request, response) => {
+  try {
+    const { userId, steps } = request.body;
+    const data = await roadmap.addRoadmap(userId, steps);
+    response.send(data.dataValues);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+// 로드맵 상세 조회
+app.get("/roadmap/:roadmapId", async (request, response) => {
+  try {
+    const { roadmapId } = request.params;
+    console.log(roadmapId);
+    const data = await roadmap.getSelectedRoadmapData(roadmapId);
+    response.send(data.dataValues);
+  } catch (error) {
+    console.log(error);
+    response.status(404).send("invalid roadmap");
+  }
 });
 
 // 로드맵 수정
-app.put("/roadmap/:roadmapId", (request, response) => {
-  response.send("테스트");
+app.put("/roadmap/:roadmapId", validateToken, async (request, response) => {
+  try {
+    const { roadmapId } = request.params;
+    const { steps } = request.body;
+    await roadmap.updateSelectedRoadmap(roadmapId, steps);
+    response.send("성공적으로 수정됨");
+  } catch (error) {
+    console.log(error);
+    response.status(404).send("invalid roadmap");
+  }
 });
 
 // 로드맵 삭제
-app.delete("/roadmap/:roadmapId", (request, response) => {
-  response.send("테스트");
+app.delete("/roadmap/:roadmapId", validateToken, async (request, response) => {
+  try {
+    const { roadmapId } = request.params;
+    await roadmap.deleteSelectedRoadmapData(roadmapId);
+    response.send("성공적으로 삭제됨");
+  } catch (error) {
+    console.log(error);
+    response.status(404).send("invalid roadmap");
+  }
 });
 
 // 로드맵 찜하기
-app.post("/save/:roadmapId", (request, response) => {
-  response.send("테스트");
+app.post("/save/:roadmapId", validateToken, async (request, response) => {
+  const { roadmapId } = request.params;
+  const { userId } = (await roadmap.getSelectedRoadmapData(roadmapId))
+    .dataValues;
+  await save.addRoadmap(userId, roadmapId);
+  response.send("찜 성공");
 });
 
 // 로드맵 찜하기 취소
-app.delete("/save/:roadmapId", (request, response) => {
+app.delete("/save/:roadmapId", validateToken, async (request, response) => {
   response.send("테스트");
 });
 
 // 찜하기 횟수
-app.get("/save/:roadmapId", (request, response) => {
+app.get("/save/:roadmapId", async (request, response) => {
   response.send("테스트");
 });
 
 // 특정 유저의 찜한 로드맵 보기
-app.get("/save/:userId", (request, response) => {
+app.get("/save/:userId", async (request, response) => {
   response.send("테스트");
 });
 

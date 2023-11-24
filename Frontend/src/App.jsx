@@ -1,47 +1,47 @@
-import React from "react";
-import instance from "./instance";
 import Login from "./Login";
+import * as api from "./api";
 
 function App() {
-  const [data, setData] = React.useState();
-  const [token, setToken] = React.useState();
-
-  const get = async () => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) return;
-    const { data } = await instance.get("/user", {
-      params: { accessToken: accessToken },
-    });
-    setData(data);
-  };
-
-  React.useEffect(() => {
-    get();
-    console.log(data);
-  }, []);
-
-  const reissueToken = async () => {
-    const refreshToken = localStorage.getItem("refreshToken");
-    const { data } = await instance.put("/token/reissue", null, {
-      params: { refreshToken: refreshToken },
-    });
-    localStorage.setItem("accessToken", data);
-    setToken(data);
-  };
-
   return (
     <div style={{ background: "lightblue", width: "100vw", height: "100vh" }}>
-      <button>
-        <Login />
-      </button>
       <div>
-        <button onClick={reissueToken}>토큰재발급</button>
-        <h1>
-          새거:<pre>{token}</pre>
-        </h1>
+        <button>
+          <Login />
+        </button>
       </div>
-      <button onClick={get}>내 정보</button>
-      <h1>응답 : {}</h1>
+      <div>
+        <button onClick={api.reissueToken}>토큰재발급</button>
+      </div>
+      <div>
+        <button onClick={api.getUser}>내 정보</button>
+      </div>
+      <div>
+        <button onClick={() => api.getSelectedUser(1)}>한명 정보</button>
+      </div>
+      <div>
+        <button onClick={api.getRoadmapData}>전체 로드맵</button>
+      </div>
+      <div>
+        <button onClick={() => api.getUserRoadmapData(1)}>한명 로드맵</button>
+      </div>
+      <div>
+        <button onClick={() => api.generateRoadmap(1, "asdf")}>
+          로드맵 생성
+        </button>
+      </div>
+      <div>
+        <button onClick={() => api.updateSelectedRoadmap(3, "qwer")}>
+          로드맵 수정
+        </button>
+      </div>
+      <div>
+        <button onClick={() => api.getRoadmapDetail(3)}>로드맵 상세</button>
+      </div>
+      <div>
+        <button onClick={() => api.deleteSelectedRoadmap(3)}>
+          로드맵 삭제
+        </button>
+      </div>
     </div>
   );
 }

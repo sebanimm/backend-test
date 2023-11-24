@@ -173,8 +173,13 @@ app.put("/roadmap/:roadmapId", validateToken, async (request, response) => {
   try {
     const { roadmapId } = request.params;
     const { steps } = request.body;
-    await roadmap.updateSelectedRoadmap(roadmapId, steps);
-    response.send("성공적으로 수정됨");
+    try {
+      await roadmap.updateSelectedRoadmap(roadmapId, steps);
+      response.send("성공적으로 수정됨");
+    } catch (error) {
+      console.log(error);
+      response.send("수정 실패");
+    }
   } catch (error) {
     console.log(error);
     response.status(404).send("invalid roadmap");
@@ -185,8 +190,13 @@ app.put("/roadmap/:roadmapId", validateToken, async (request, response) => {
 app.delete("/roadmap/:roadmapId", validateToken, async (request, response) => {
   try {
     const { roadmapId } = request.params;
-    await roadmap.deleteSelectedRoadmapData(roadmapId);
-    response.send("성공적으로 삭제됨");
+    try {
+      await roadmap.deleteSelectedRoadmapData(roadmapId);
+      response.send("성공적으로 삭제됨");
+    } catch (error) {
+      console.log(error);
+      response.send("삭제 실패");
+    }
   } catch (error) {
     console.log(error);
     response.status(404).send("invalid roadmap");
@@ -208,12 +218,12 @@ app.delete("/save/:roadmapId", validateToken, async (request, response) => {
 });
 
 // 찜하기 횟수
-app.get("/save/:roadmapId", async (request, response) => {
+app.get("/save/:roadmapId/count", async (request, response) => {
   response.send("테스트");
 });
 
 // 특정 유저의 찜한 로드맵 보기
-app.get("/save/:userId", async (request, response) => {
+app.get("/save/:userId/roadmap", async (request, response) => {
   response.send("테스트");
 });
 

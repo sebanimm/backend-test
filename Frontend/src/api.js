@@ -49,3 +49,25 @@ export const deleteSelectedRoadmap = async (roadmapId) => {
   const { data } = await instance.delete(`/roadmap/${roadmapId}`);
   console.log(data);
 };
+
+export const addJJim = async (roadmapId, userId) => {
+  const { data } = await instance.post(`/save/${roadmapId}`, { userId });
+  console.log(data);
+};
+
+export const deleteJJim = async (roadmapId, userId) => {
+  const { data } = await instance.delete(`/save/${roadmapId}`, {
+    params: { userId },
+  });
+  console.log(data);
+};
+
+export const countJJim = async (roadmapId) => {
+  const { data } = await instance.get(`/save/${roadmapId}/count`);
+  console.log(data);
+};
+
+export const userJJimRoadmap = async (userId) => {
+  const { data } = await instance.get(`/save/${userId}/roadmap`);
+  console.log(data);
+};

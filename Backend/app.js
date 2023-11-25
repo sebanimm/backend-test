@@ -30,6 +30,8 @@ app.use("/roadmap", express.json());
 app.use("/roadmap", express.urlencoded({ extended: false }));
 app.use("/roadmap/:roadmapId", express.json());
 app.use("/roadmap/:roadmapId", express.urlencoded({ extended: false }));
+app.use("/save/:roadmapId", express.json());
+app.use("/save/:roadmapId", express.urlencoded({ extended: false }));
 
 app.get("/", (res, req) => {
   req.send("성공");
@@ -126,8 +128,7 @@ app.get("/user/:userId/roadmap", async (request, response) => {
   try {
     const userId = request.params.userId;
     const data = await roadmap.getUserRoadmapData(userId);
-
-    response.send(data.dataValues);
+    response.send(data);
   } catch (error) {
     console.log(error);
     response.status(404).send("invalid user");
@@ -149,7 +150,7 @@ app.post("/roadmap", validateToken, async (request, response) => {
   try {
     const { userId, steps } = request.body;
     const data = await roadmap.addRoadmap(userId, steps);
-    response.send(data.dataValues);
+    response.send(data);
   } catch (error) {
     console.log(error);
   }
@@ -159,7 +160,6 @@ app.post("/roadmap", validateToken, async (request, response) => {
 app.get("/roadmap/:roadmapId", async (request, response) => {
   try {
     const { roadmapId } = request.params;
-    console.log(roadmapId);
     const data = await roadmap.getSelectedRoadmapData(roadmapId);
     response.send(data.dataValues);
   } catch (error) {
@@ -173,12 +173,11 @@ app.put("/roadmap/:roadmapId", validateToken, async (request, response) => {
   try {
     const { roadmapId } = request.params;
     const { steps } = request.body;
-    try {
-      await roadmap.updateSelectedRoadmap(roadmapId, steps);
+    const data = await roadmap.updateSelectedRoadmap(roadmapId, steps);
+    if (data === null) {
+      response.send("존재하지 않는 로드맵");
+    } else {
       response.send("성공적으로 수정됨");
-    } catch (error) {
-      console.log(error);
-      response.send("수정 실패");
     }
   } catch (error) {
     console.log(error);
@@ -190,12 +189,11 @@ app.put("/roadmap/:roadmapId", validateToken, async (request, response) => {
 app.delete("/roadmap/:roadmapId", validateToken, async (request, response) => {
   try {
     const { roadmapId } = request.params;
-    try {
-      await roadmap.deleteSelectedRoadmapData(roadmapId);
+    const data = await roadmap.deleteSelectedRoadmapData(roadmapId);
+    if (data === null) {
+      response.send("존재하지 않는 로드맵");
+    } else {
       response.send("성공적으로 삭제됨");
-    } catch (error) {
-      console.log(error);
-      response.send("삭제 실패");
     }
   } catch (error) {
     console.log(error);
@@ -205,26 +203,60 @@ app.delete("/roadmap/:roadmapId", validateToken, async (request, response) => {
 
 // 로드맵 찜하기
 app.post("/save/:roadmapId", validateToken, async (request, response) => {
-  const { roadmapId } = request.params;
-  const { userId } = (await roadmap.getSelectedRoadmapData(roadmapId))
-    .dataValues;
-  await save.addRoadmap(userId, roadmapId);
-  response.send("찜 성공");
+  try {
+    const { roadmapId } = request.params;
+    const { userId } = request.body;
+    const data = await save.addSave(userId, roadmapId);
+    if (data === null) {
+      response.send("로드맵이 존재하지 않음");
+    } else {
+      response.send("찜 성공");
+    }
+  } catch (error) {
+    console.log(error);
+    response.send("이미 찜한 로드맵입니다");
+  }
 });
 
 // 로드맵 찜하기 취소
 app.delete("/save/:roadmapId", validateToken, async (request, response) => {
-  response.send("테스트");
+  try {
+    const { roadmapId } = request.params;
+    const { userId } = request.query;
+    const data = await save.deleteSave(userId, roadmapId);
+    if (data === null) {
+      response.send("존재하지 않는 찜");
+    } else {
+      response.send("찜 취소 성공");
+    }
+  } catch (error) {
+    console.log(error);
+    response.send("찜 취소 실패");
+  }
 });
 
 // 찜하기 횟수
 app.get("/save/:roadmapId/count", async (request, response) => {
-  response.send("테스트");
+  try {
+    const { roadmapId } = request.params;
+    const data = await save.getSaveCount(roadmapId);
+    response.status(200).json(data);
+  } catch (error) {
+    console.log(error);
+    response.send("찜 갯수 불러오기 실패");
+  }
 });
 
 // 특정 유저의 찜한 로드맵 보기
 app.get("/save/:userId/roadmap", async (request, response) => {
-  response.send("테스트");
+  try {
+    const { userId } = request.params;
+    const data = await save.getUserSavedRoadmap(userId);
+    response.send(data);
+  } catch (error) {
+    console.log(error);
+    response.send("찜한 로드맵 불러오기 실패");
+  }
 });
 
 app.listen(8080, () => {

@@ -25,7 +25,9 @@ function App() {
         <button onClick={() => api.getUserRoadmapData(1)}>한명 로드맵</button>
       </div>
       <div>
-        <button onClick={() => api.generateRoadmap(1, "asdf")}>
+        <button
+          onClick={() => api.generateRoadmap(1, ["asdf", "qwer", "vjsw"])}
+        >
           로드맵 생성
         </button>
       </div>
@@ -41,6 +43,12 @@ function App() {
         <button onClick={() => api.deleteSelectedRoadmap(3)}>
           로드맵 삭제
         </button>
+      </div>
+      <div>
+        <button onClick={() => api.addJJim(5, 1)}>찜 추가</button>
+        <button onClick={() => api.deleteJJim(5, 1)}>찜 제거</button>
+        <button onClick={() => api.countJJim(5)}>찜 갯수</button>
+        <button onClick={() => api.userJJimRoadmap(1)}>유저 찜한 로드맵</button>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ const Login = () => {
   return (
     <>
       {!localStorage.getItem("accessToken") ? (
-        <a href="https://auth.bssm.kro.kr/oauth?clientId=c44b124c&redirectURI=http://localhost:5173/">
+        <a href="https://auth.bssm.kro.kr/oauth?clientId=c44b124c&redirectURI=http://localhost:3000/oauth">
           bsm oauth임
         </a>
       ) : (
